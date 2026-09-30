@@ -30,5 +30,7 @@ services:
         sync: false
       - key: VITE_FIREBASE_APP_ID
         sync: false
+      - key: VITE_FIREBASE_DATABASE_URL
+        sync: false
       - key: VITE_FIREBASE_OAUTH_CLIENT_ID
         sync: false
