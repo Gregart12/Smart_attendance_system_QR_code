@@ -1,0 +1,33 @@
+# Render Blueprint for the FUTO Smart QR Attendance Portal.
+#
+# Deploy with: Render Dashboard > New > Blueprint, and point it at this repo.
+#
+# The `routes` rewrite below is required. Without it, refreshing any deep link
+# (for example the /reset-password link emailed to staff) returns a 404 because
+# the browser asks the static server for a file that only React Router serves.
+
+services:
+  - type: web
+    name: futo-smart-qr-attendance
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: false
+    routes:
+      - type: rewrite
+        destination: /index.html
+    envVars:
+      - key: VITE_FIREBASE_API_KEY
+        sync: false
+      - key: VITE_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: VITE_FIREBASE_PROJECT_ID
+        sync: false
+      - key: VITE_FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: VITE_FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: VITE_FIREBASE_APP_ID
+        sync: false
+      - key: VITE_FIREBASE_OAUTH_CLIENT_ID
+        sync: false

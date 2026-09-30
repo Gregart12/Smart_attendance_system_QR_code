@@ -1,0 +1,6 @@
+{
+  "name": "FUTO ICT Smart QR Staff Attendance Portal",
+  "description": "Federal University of Technology Owerri (FUTO) Directorate of ICT - Geofenced Smart QR Code Staff Attendance Portal.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

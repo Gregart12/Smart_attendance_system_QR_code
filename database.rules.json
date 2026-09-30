@@ -1,0 +1,191 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "system": {
+      "adminPasscodeProbe": {
+        ".write": "newData.val() === 'e1ed2376ff253157601de3512a2307ae9e6d7186016a238523876357986524e3' || newData.val() === null",
+        ".validate": "newData.isString() && newData.val().length === 64"
+      }
+    },
+
+    "admins": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (auth.uid === $uid && !data.exists() && newData.child('adminPasscodeProof').val() === 'e1ed2376ff253157601de3512a2307ae9e6d7186016a238523876357986524e3' && !root.child('revokedUsers').child($uid).exists()))",
+        ".validate": "newData.hasChildren(['uid', 'name', 'email', 'role']) && newData.child('uid').val() === $uid && newData.child('role').val() === 'admin' && newData.child('email').isString() && newData.child('name').isString()",
+        "uid": {
+          ".validate": "newData.isString() && ((auth != null && root.child('admins').child(auth.uid).exists()) || (auth != null && newData.val() === auth.uid))"
+        },
+        "role": {
+          ".validate": "newData.val() === 'admin'"
+        },
+        "email": {
+          ".validate": "newData.isString() && ((auth != null && root.child('admins').child(auth.uid).exists()) || !data.exists() || data.val() === newData.val())"
+        },
+        "createdAt": {
+          ".validate": "newData.isString() && ((auth != null && root.child('admins').child(auth.uid).exists()) || !data.exists() || data.val() === newData.val())"
+        },
+        "adminPasscodeProof": {
+          ".validate": "newData.isString() && ((auth != null && root.child('admins').child(auth.uid).exists()) || newData.val() === 'e1ed2376ff253157601de3512a2307ae9e6d7186016a238523876357986524e3')"
+        },
+        "accountTitle": {
+          ".validate": "newData.isString() && newData.val().length <= 100"
+        }
+      }
+    },
+
+    "staff": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || auth.uid === $uid)",
+        ".validate": "newData.hasChildren(['uid', 'staffId', 'name', 'email', 'role', 'department', 'status']) && newData.child('uid').val() === $uid && newData.child('role').val() === 'staff' && newData.child('staffId').isString() && newData.child('email').isString() && newData.child('name').isString() && newData.child('department').isString() && (newData.child('status').val() === 'active' || newData.child('status').val() === 'suspended' || newData.child('status').val() === 'inactive') && !root.child('revokedUsers').child($uid).exists()",
+        "uid": {
+          ".validate": "newData.val() === $uid"
+        },
+        "role": {
+          ".validate": "newData.val() === 'staff'"
+        },
+        "status": {
+          ".validate": "(auth != null && root.child('admins').child(auth.uid).exists()) || !data.exists() || data.val() === newData.val()"
+        },
+        "createdAt": {
+          ".validate": "newData.isString() && ((auth != null && root.child('admins').child(auth.uid).exists()) || !data.exists() || data.val() === newData.val())"
+        },
+        "name": {
+          ".validate": "newData.isString() || (auth != null && root.child('admins').child(auth.uid).exists())"
+        },
+        "email": {
+          ".validate": "newData.isString() || (auth != null && root.child('admins').child(auth.uid).exists())"
+        },
+        "department": {
+          ".validate": "newData.isString() || (auth != null && root.child('admins').child(auth.uid).exists())"
+        },
+        "designation": {
+          ".validate": "newData.isString() || (auth != null && root.child('admins').child(auth.uid).exists())"
+        },
+        "staffCategory": {
+          ".validate": "newData.val() === 'academic' || newData.val() === 'non-academic'"
+        },
+        "phone": {
+          ".validate": "(newData.isString() && newData.val().length <= 40) || (auth != null && root.child('admins').child(auth.uid).exists())"
+        },
+        "photoUrl": {
+          ".validate": "newData.isString() || (auth != null && root.child('admins').child(auth.uid).exists())"
+        },
+        "totalPresent": {
+          ".validate": "newData.isNumber() && ((auth != null && root.child('admins').child(auth.uid).exists()) || (newData.val() >= (data.exists() ? data.val() : 0) && newData.val() <= (data.exists() ? data.val() + 1 : 1)))"
+        },
+        "totalSessions": {
+          ".validate": "newData.isNumber() && ((auth != null && root.child('admins').child(auth.uid).exists()) || (newData.val() >= (data.exists() ? data.val() : 0) && newData.val() <= (data.exists() ? data.val() + 1 : 1)))"
+        },
+        "attendanceStreak": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && ((auth != null && root.child('admins').child(auth.uid).exists()) || !data.exists() || (auth != null && newData.val() <= root.child('staff').child(auth.uid).child('totalSessions').val() + 1))"
+        }
+      }
+    },
+
+    "accountEmails": {
+      "$email": {
+        ".read": true,
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || newData.child('uid').val() === auth.uid || data.child('uid').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['uid', 'role']) && newData.child('uid').isString() && (newData.child('role').val() === 'admin' || newData.child('role').val() === 'staff')",
+        "uid": {
+          ".validate": "(auth != null && root.child('admins').child(auth.uid).exists()) || (auth != null && newData.val() === auth.uid)"
+        },
+        "role": {
+          ".validate": "(auth != null && root.child('admins').child(auth.uid).exists()) || data.val() === newData.val() || !data.exists()"
+        }
+      }
+    },
+
+    "staffIds": {
+      "$staffId": {
+        ".read": true,
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || newData.child('uid').val() === auth.uid || data.child('uid').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['uid']) && newData.child('uid').isString()",
+        "uid": {
+          ".validate": "(auth != null && root.child('admins').child(auth.uid).exists()) || (auth != null && newData.val() === auth.uid)"
+        }
+      }
+    },
+
+    "revokedUsers": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).exists())",
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".validate": "newData.child('uid').val() === $uid"
+      }
+    },
+
+    "attendanceSessions": {
+      ".read": "auth != null",
+      "$sessionId": {
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".validate": "newData.hasChildren(['id', 'title', 'department', 'status']) && (data.exists() || (auth != null && newData.child('createdByUid').val() === auth.uid))",
+        "id": {
+          ".validate": "newData.val() === $sessionId"
+        },
+        "createdByUid": {
+          ".validate": "newData.isString() && ((auth != null && root.child('admins').child(auth.uid).exists()) || data.val() === newData.val())"
+        },
+        "sessionToken": {
+          ".validate": "newData.isString()"
+        },
+        "status": {
+          ".validate": "newData.isString() && ((auth != null && root.child('admins').child(auth.uid).exists()) || data.val() === newData.val() || !data.exists())"
+        }
+      }
+    },
+
+    "attendanceRecords": {
+      ".read": "auth != null",
+      "$recordId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (newData.child('staffUid').val() === auth.uid && !data.exists()))",
+        ".validate": "newData.hasChildren(['id', 'sessionId', 'staffUid', 'staffId', 'staffName', 'date', 'time', 'status']) && (data.exists() || (auth != null && (newData.child('staffUid').val() === auth.uid || root.child('admins').child(auth.uid).exists())))",
+        "id": {
+          ".validate": "newData.val() === $recordId"
+        },
+        "staffUid": {
+          ".validate": "(auth != null && root.child('admins').child(auth.uid).exists()) || data.val() === newData.val() || !data.exists()"
+        },
+        "sessionId": {
+          ".validate": "newData.isString() && ((auth != null && root.child('admins').child(auth.uid).exists()) || data.val() === newData.val() || !data.exists())"
+        },
+        "scannedAt": {
+          ".validate": "newData.isString() && ((auth != null && root.child('admins').child(auth.uid).exists()) || data.val() === newData.val() || !data.exists())"
+        },
+        "status": {
+          ".validate": "(newData.val() === 'present' || newData.val() === 'late' || newData.val() === 'absent') && ((auth != null && root.child('admins').child(auth.uid).exists()) || data.val() === newData.val() || !data.exists())"
+        }
+      }
+    },
+
+    "notifications": {
+      ".read": "auth != null",
+      "$notificationId": {
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".validate": "newData.hasChildren(['id', 'title', 'message', 'type', 'createdAt'])"
+      }
+    },
+
+    "logs": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$logId": {
+        ".write": "auth != null && (!data.exists() || root.child('admins').child(auth.uid).exists())",
+        ".validate": "newData.hasChildren(['action', 'timestamp'])"
+      }
+    },
+
+    "settings": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+      "$settingId": {
+        ".validate": "newData.hasChildren(['defaultLat', 'defaultLng', 'defaultRadius'])"
+      }
+    }
+  }
+}

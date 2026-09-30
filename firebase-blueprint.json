@@ -1,0 +1,168 @@
+{
+  "entities": {
+    "admins": {
+      "title": "Admins",
+      "description": "Administrator account profiles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "department": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "name", "email", "role"]
+    },
+    "staff": {
+      "title": "Staff",
+      "description": "Staff account profiles and metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "staffId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "department": { "type": "string" },
+        "designation": { "type": "string" },
+        "phone": { "type": "string" },
+        "status": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "staffId", "name", "email", "role", "department", "status"]
+    },
+    "attendanceSessions": {
+      "title": "Attendance Sessions",
+      "description": "QR attendance sessions created by admins",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "department": { "type": "string" },
+        "date": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "durationMinutes": { "type": "number" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "radiusMeters": { "type": "number" },
+        "buildingName": { "type": "string" },
+        "sessionToken": { "type": "string" },
+        "expiresAt": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["title", "department", "date", "latitude", "longitude", "radiusMeters", "sessionToken", "expiresAt", "status"]
+    },
+    "attendanceRecords": {
+      "title": "Attendance Records",
+      "description": "Individual attendance logs scanned by staff",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "sessionTitle": { "type": "string" },
+        "staffUid": { "type": "string" },
+        "staffId": { "type": "string" },
+        "staffName": { "type": "string" },
+        "department": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "distanceFromCenterMeters": { "type": "number" },
+        "status": { "type": "string" },
+        "deviceInfo": { "type": "string" },
+        "scannedAt": { "type": "string" }
+      },
+      "required": ["sessionId", "staffUid", "staffId", "staffName", "date", "time", "status"]
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "System announcements and staff alerts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "targetDepartment": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["title", "message", "type", "createdAt"]
+    },
+    "logs": {
+      "title": "Audit Logs",
+      "description": "System activity and security logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "performedBy": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["action", "timestamp"]
+    },
+    "settings": {
+      "title": "System Settings",
+      "description": "Global settings for IT department location & defaults",
+      "type": "object",
+      "properties": {
+        "defaultLat": { "type": "number" },
+        "defaultLng": { "type": "number" },
+        "defaultRadius": { "type": "number" },
+        "departmentName": { "type": "string" },
+        "buildingName": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "accountEmails": {
+      "title": "Account Email Index",
+      "description": "Email to account mapping used by sign-up and password reset without exposing the staff directory",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "role": { "type": "string" },
+        "indexedAt": { "type": "string" }
+      },
+      "required": ["uid", "role"]
+    },
+    "system": {
+      "title": "System Bootstrap",
+      "description": "One-time claim of the first administrator account",
+      "type": "object",
+      "properties": {
+        "adminUid": { "type": "string" },
+        "claimedAt": { "type": "string" }
+      },
+      "required": ["adminUid"]
+    },
+    "staffIds": {
+      "title": "Staff ID Index",
+      "description": "Staff ID to account mapping used to detect duplicates during sign-up",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "indexedAt": { "type": "string" }
+      },
+      "required": ["uid"]
+    },
+    "revokedUsers": {
+      "title": "Revoked Accounts",
+      "description": "Accounts blocked from signing in after an administrator revokes them",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" },
+        "revokedAt": { "type": "string" }
+      },
+      "required": ["uid"]
+    }
+  }
+}
