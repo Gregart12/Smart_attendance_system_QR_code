@@ -18,9 +18,9 @@ export const AttendanceStreakCard: React.FC<StreakProps> = ({
   const percentage = hasData ? Math.round((totalPresent / totalSessions) * 100) : null;
 
   return (
-    <div className="glass-card" style={{ background: 'linear-gradient(135deg, var(--bg-surface) 0%, var(--accent-light) 100%)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
+    <div className="glass-card staff-streak-card" style={{ background: 'linear-gradient(135deg, var(--bg-surface) 0%, var(--accent-light) 100%)' }}>
+      <div className="staff-streak-card__content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="staff-streak-card__copy">
           <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Punctuality Performance
           </span>
@@ -34,7 +34,7 @@ export const AttendanceStreakCard: React.FC<StreakProps> = ({
           </p>
         </div>
 
-        <div style={{ textAlign: 'right' }}>
+        <div className="staff-streak-card__metric" style={{ textAlign: 'right' }}>
           <div
             style={{
               width: '64px',

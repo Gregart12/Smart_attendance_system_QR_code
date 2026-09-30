@@ -66,7 +66,7 @@ export const StaffDashboard: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* Welcome Banner */}
       <div
-        className="glass-card"
+        className="glass-card staff-dashboard-welcome"
         style={{
           background: 'linear-gradient(135deg, var(--bg-surface) 0%, var(--success-bg) 100%)',
           display: 'flex',
@@ -76,8 +76,8 @@ export const StaffDashboard: React.FC = () => {
           gap: '1rem'
         }}
       >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+        <div className="staff-dashboard-welcome__copy">
+          <div className="staff-dashboard-welcome__meta" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
             <span className="badge badge-present" style={{ fontSize: '0.75rem' }}>
               Staff ID: {(userProfile as any)?.staffId || 'IT/2026/089'}
             </span>
@@ -94,7 +94,7 @@ export const StaffDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div className="staff-dashboard-welcome__action" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <button onClick={() => setIsScannerOpen(true)} className="btn btn-success btn-lg pulse-glow">
             <ScanLine size={22} /> Scan Attendance QR
           </button>
@@ -104,7 +104,7 @@ export const StaffDashboard: React.FC = () => {
       {/* Active Session Notification Card */}
       {activeSessions.length > 0 && (
         <div
-          className="animate-fade-in"
+          className="animate-fade-in staff-dashboard-session"
           style={{
             padding: '1.25rem',
             borderRadius: 'var(--radius-md)',
@@ -117,7 +117,7 @@ export const StaffDashboard: React.FC = () => {
             gap: '1rem'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div className="staff-dashboard-session__details" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
             <div
               style={{
                 width: '46px',
@@ -132,7 +132,7 @@ export const StaffDashboard: React.FC = () => {
             >
               <QrCode size={24} />
             </div>
-            <div>
+            <div className="staff-dashboard-session__copy">
               <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>
                 Live Session Ready: "{activeSessions[0].title}"
               </h4>
@@ -142,7 +142,7 @@ export const StaffDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="staff-dashboard-session__actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <CountdownTimer expiresAt={activeSessions[0].expiresAt} />
             <button onClick={() => setIsScannerOpen(true)} className="btn btn-primary">
               <ScanLine size={18} /> Open Scanner Now
@@ -152,15 +152,15 @@ export const StaffDashboard: React.FC = () => {
       )}
 
       {/* Today's Scan Status Badge */}
-      <div className="glass-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
+      <div className="glass-card staff-dashboard-status" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="staff-dashboard-status__copy">
           <h3 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>Today's Attendance Status</h3>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
             {todayRecord ? `Scanned today at ${todayRecord.time}` : 'You have not scanned for any session today yet.'}
           </p>
         </div>
 
-        <div>
+        <div className="staff-dashboard-status__badge">
           {todayRecord ? (
             <span className="badge badge-present" style={{ fontSize: '0.9rem', padding: '0.5rem 1rem' }}>
               <CheckCircle2 size={18} /> Marked {todayRecord.status.toUpperCase()}

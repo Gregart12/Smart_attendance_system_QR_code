@@ -31,7 +31,7 @@ export const AttendanceHeatmap: React.FC<HeatmapProps> = ({ records }) => {
         Visual record of your QR attendance scans over the past 30 days
       </p>
 
-      <div
+      <div className="staff-heatmap-legend"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(36px, 1fr))',
