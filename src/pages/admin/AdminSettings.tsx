@@ -4,6 +4,7 @@ import { getSystemSettings, saveSystemSettings, updateAdminProfile } from '../..
 import { SystemSettings } from '../../types';
 import { DEFAULT_IT_DEPT_GEO, MAX_GEOFENCE_RADIUS_METERS } from '../../utils/haversine';
 import { useAuth } from '../../contexts/AuthContext';
+import { GeofenceLocationPicker } from '../../components/admin/GeofenceLocationPicker';
 import { MapPin, Save, Check, UserRound, ShieldCheck, BarChart3, Users, BellRing, Upload } from 'lucide-react';
 
 export const AdminSettings: React.FC = () => {
@@ -23,8 +24,6 @@ export const AdminSettings: React.FC = () => {
   const [latInput, setLatInput] = useState(String(DEFAULT_IT_DEPT_GEO.latitude));
   const [lngInput, setLngInput] = useState(String(DEFAULT_IT_DEPT_GEO.longitude));
   const [radiusInput, setRadiusInput] = useState(String(DEFAULT_IT_DEPT_GEO.radiusMeters));
-  const [locationCaptureMessage, setLocationCaptureMessage] = useState('');
-
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -258,73 +257,52 @@ export const AdminSettings: React.FC = () => {
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-          <div className="form-group">
-            <label className="form-label">Latitude</label>
-            <input
-              type="number"
-              step="0.000001"
-              required
-              value={latInput}
-              onChange={(e) => setLatInput(e.target.value)}
-              className="form-input"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Longitude</label>
-            <input
-              type="number"
-              step="0.000001"
-              required
-              value={lngInput}
-              onChange={(e) => setLngInput(e.target.value)}
-              className="form-input"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Allowed Radius (Meters)</label>
-            <input
-              type="number"
-              min="1"
-              max={MAX_GEOFENCE_RADIUS_METERS}
-              required
-              value={radiusInput}
-              onChange={(e) => setRadiusInput(e.target.value)}
-              className="form-input"
-            />
-          </div>
+        <div className="form-group">
+          <label className="form-label">Attendance Venue Location</label>
+          <GeofenceLocationPicker
+            latitude={Number(latInput)}
+            longitude={Number(lngInput)}
+            onLocationSelect={(latitude, longitude) => {
+              setLatInput(latitude.toFixed(6));
+              setLngInput(longitude.toFixed(6));
+            }}
+          />
+          <details style={{ marginTop: '0.6rem' }}>
+            <summary style={{ cursor: 'pointer', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              Coordinates (advanced)
+            </summary>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.6rem' }}>
+              <input
+                type="number"
+                step="0.000001"
+                aria-label="Latitude"
+                value={latInput}
+                onChange={(event) => setLatInput(event.target.value)}
+                className="form-input"
+              />
+              <input
+                type="number"
+                step="0.000001"
+                aria-label="Longitude"
+                value={lngInput}
+                onChange={(event) => setLngInput(event.target.value)}
+                className="form-input"
+              />
+            </div>
+          </details>
         </div>
 
-        <div style={{ marginTop: '0.5rem' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setLocationCaptureMessage('');
-              if (!navigator.geolocation) {
-                setLocationCaptureMessage('This browser does not support location services.');
-                return;
-              }
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  setLatInput(position.coords.latitude.toFixed(6));
-                  setLngInput(position.coords.longitude.toFixed(6));
-                  setLocationCaptureMessage(`Location captured with estimated accuracy of ±${Math.round(position.coords.accuracy)}m. Confirm the pin is at the attendance venue, then save settings.`);
-                },
-                () => setLocationCaptureMessage('Could not read this device location. Enter the building coordinates manually.'),
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-              );
-            }}
-          >
-            <MapPin size={14} /> Capture Building Location
-          </button>
-          {locationCaptureMessage && (
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.5rem 0 0' }}>
-              {locationCaptureMessage}
-            </p>
-          )}
+        <div className="form-group" style={{ maxWidth: '240px' }}>
+          <label className="form-label">Allowed Radius (Meters)</label>
+          <input
+            type="number"
+            min="1"
+            max={MAX_GEOFENCE_RADIUS_METERS}
+            required
+            value={radiusInput}
+            onChange={(e) => setRadiusInput(e.target.value)}
+            className="form-input"
+          />
         </div>
 
         {error && (
