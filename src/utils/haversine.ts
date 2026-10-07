@@ -30,6 +30,8 @@ export function calculateDistanceMeters(
   return R * c;
 }
 
+export const ATTENDANCE_GEOFENCE_RADIUS_METERS = 200;
+
 /**
  * Checks if staff coordinates are within the allowed geofence radius of the department
  */

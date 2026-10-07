@@ -4,6 +4,7 @@ import { createAttendanceSession } from '../../firebase/services';
 import { createQRPayload, generateQRDataUrl } from '../../utils/qrCodeGenerator';
 import { getCurrentDateFormatted, getCurrentTimeFormatted } from '../../utils/dateUtils';
 import { useSystemSettings } from '../../hooks/useSystemSettings';
+import { ATTENDANCE_GEOFENCE_RADIUS_METERS } from '../../utils/haversine';
 import { CountdownTimer } from '../common/CountdownTimer';
 import { QrCode, Copy, Check, MapPin, Clock, Sparkles } from 'lucide-react';
 
@@ -20,9 +21,7 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
   onCreated,
   adminName
 }) => {
-  // Geofence defaults come from Admin Settings, so the scanner enforces the
-  // coordinates the department actually configured.
-  const { settings, center } = useSystemSettings();
+  const { settings } = useSystemSettings();
 
   const [title, setTitle] = useState('IT Staff Morning Attendance Check');
   const [department, setDepartment] = useState('Department of Information Technology');
@@ -30,49 +29,20 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
   const [startTime, setStartTime] = useState(getCurrentTimeFormatted());
   const durationMinutes = 10;
 
-  // Held as strings: Number('') is 0, so a number input bound directly to a
-  // number collapses to 0 the moment the admin clears it to retype.
-  const [latitude, setLatitude] = useState(String(center.latitude));
-  const [longitude, setLongitude] = useState(String(center.longitude));
-  const [radiusMeters, setRadiusMeters] = useState(String(center.radiusMeters));
-  const [buildingName, setBuildingName] = useState(center.buildingName);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [generatedQRUrl, setGeneratedQRUrl] = useState<string | null>(null);
   const [generatedPayload, setGeneratedPayload] = useState<any>(null);
   const [copied, setCopied] = useState(false);
 
-  // Reseed the geofence fields from the live settings each time the modal opens.
   useEffect(() => {
     if (!isOpen) return;
     setDepartment((prev) => prev || settings.departmentName);
-    setLatitude(String(center.latitude));
-    setLongitude(String(center.longitude));
-    setRadiusMeters(String(center.radiusMeters));
-    setBuildingName(center.buildingName);
-  }, [isOpen, center.latitude, center.longitude, center.radiusMeters, center.buildingName, settings.departmentName]);
+  }, [isOpen, settings.departmentName]);
 
   const handleGenerateQR = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    const lat = Number(latitude);
-    const lng = Number(longitude);
-    const radius = Number(radiusMeters);
-
-    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
-      setError('Enter a valid latitude between -90 and 90.');
-      return;
-    }
-    if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
-      setError('Enter a valid longitude between -180 and 180.');
-      return;
-    }
-    if (!Number.isFinite(radius) || radius <= 0 || radius > 250) {
-      setError('The geofence radius must be between 1 and 250 metres.');
-      return;
-    }
 
     // The QR must be valid for the selected window, not for "now": the previous
     // implementation ignored these fields and started counting immediately.
@@ -88,6 +58,30 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
 
     setLoading(true);
     try {
+      if (!navigator.geolocation) {
+        throw new Error('This browser does not support location services.');
+      }
+
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          resolve,
+          (geoError) => {
+            const message = geoError.code === geoError.PERMISSION_DENIED
+              ? 'Allow location access to generate an attendance QR at your current location.'
+              : 'Unable to determine your current location. Check location services and try again.';
+            reject(new Error(message));
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      });
+
+      if (position.coords.accuracy > 50) {
+        throw new Error(`Your location is only accurate to ±${Math.round(position.coords.accuracy)}m. Move to an area with a clearer GPS signal and try again.`);
+      }
+
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const radius = ATTENDANCE_GEOFENCE_RADIUS_METERS;
       const tempId = `SESSION_${Date.now()}`;
       const { rawPayload, qrString, expiresAt } = createQRPayload(
         tempId,
@@ -113,7 +107,7 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
         latitude: lat,
         longitude: lng,
         radiusMeters: radius,
-        buildingName,
+        buildingName: 'Admin device location',
         sessionToken: rawPayload.token,
         expiresAt,
         createdBy: adminName,
@@ -131,7 +125,7 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
       if (onCreated) onCreated();
     } catch (err) {
       console.error('Failed creating QR session:', err);
-      setError('Error generating QR attendance session. Please try again.');
+      setError(err instanceof Error ? err.message : 'Error generating QR attendance session. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -234,47 +228,8 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
               <MapPin size={16} className="text-primary" /> Geofence Location Boundary
             </h4>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
-              <div>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Latitude</label>
-                <input
-                  type="number"
-                  step="0.000001"
-                  value={latitude}
-                  onChange={(e) => setLatitude(e.target.value)}
-                  className="form-input"
-                  style={{ fontSize: '0.85rem' }}
-                />
-              </div>
-
-              <div>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Longitude</label>
-                <input
-                  type="number"
-                  step="0.000001"
-                  value={longitude}
-                  onChange={(e) => setLongitude(e.target.value)}
-                  className="form-input"
-                  style={{ fontSize: '0.85rem' }}
-                />
-              </div>
-
-              <div>
-                <label className="form-label" style={{ fontSize: '0.75rem' }}>Radius (Meters)</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={radiusMeters}
-                  onChange={(e) => setRadiusMeters(e.target.value)}
-                  max="250"
-                  className="form-input"
-                  style={{ fontSize: '0.85rem' }}
-                />
-              </div>
-            </div>
-
             <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '0.6rem 0 0' }}>
-              Defaults come from Admin Settings. Staff are checked against this radius when they scan.
+              The QR center is captured from your current GPS location when generated. Staff must be within {ATTENDANCE_GEOFENCE_RADIUS_METERS} meters to check in.
             </p>
           </div>
 

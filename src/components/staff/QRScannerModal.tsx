@@ -2,9 +2,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Modal } from '../common/Modal';
 import { useGeolocation } from '../../hooks/useGeolocation';
-import { useSystemSettings } from '../../hooks/useSystemSettings';
 import { parseAndValidateQRPayload, QRPayload } from '../../utils/qrCodeGenerator';
-import { isWithinGeofence } from '../../utils/haversine';
+import { ATTENDANCE_GEOFENCE_RADIUS_METERS, isWithinGeofence } from '../../utils/haversine';
 import { getDeviceInfo } from '../../utils/deviceDetector';
 import { getCurrentDateFormatted, getCurrentTimeFormatted } from '../../utils/dateUtils';
 import { recordAttendance, checkExistingAttendance, getAttendanceSessionForScan } from '../../firebase/services';
@@ -49,19 +48,22 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const fileScannerRef = useRef<Html5Qrcode | null>(null);
 
-  const { center } = useSystemSettings();
-
   const {
     latitude,
     longitude,
     accuracy,
     loading: geoLoading,
     error: geoError,
-    distanceFromDept,
     refreshLocation
   // Location is only requested while the scanner is open: prompting for GPS on
   // page load is treated as a poor-practice signal and is often auto-denied.
-  } = useGeolocation(center, isOpen);
+  } = useGeolocation(undefined, isOpen);
+
+  const [sessionCenter, setSessionCenter] = useState<{
+    latitude: number;
+    longitude: number;
+    buildingName: string;
+  } | null>(null);
 
   const stopCamera = useCallback(() => {
     const instance = html5QrCodeRef.current;
@@ -87,6 +89,7 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
   const handleQRScanned = useCallback(async (qrText: string) => {
     setLoading(true);
     setScanResult(null);
+    setSessionCenter(null);
 
     const fail = (message: string) => {
       setScanResult({ success: false, message });
@@ -119,6 +122,14 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
         return;
       }
 
+      const sessionLat = Number.isFinite(session.latitude) ? session.latitude : payload.latitude;
+      const sessionLng = Number.isFinite(session.longitude) ? session.longitude : payload.longitude;
+      setSessionCenter({
+        latitude: sessionLat,
+        longitude: sessionLng,
+        buildingName: session.buildingName || 'Admin location'
+      });
+
       // 3. Verify live GPS proximity before accepting the QR scan
       if (geoLoading) {
         fail('Waiting for your location to be verified before accepting the QR scan.');
@@ -137,23 +148,19 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
         return;
       }
 
-      // The session document wins over the payload for the geofence.
-      const sessionLat = Number.isFinite(session.latitude) ? session.latitude : payload.latitude;
-      const sessionLng = Number.isFinite(session.longitude) ? session.longitude : payload.longitude;
-      const allowedRadiusMeters = Number.isFinite(session.radiusMeters)
-        ? session.radiusMeters
-        : payload.radiusMeters;
-
-      if (allowedRadiusMeters < 1 || allowedRadiusMeters > 250) {
-        fail('This QR session has an invalid geofence. Please ask the admin to generate a new QR code.');
-        return;
-      }
-
-      const geoCheck = isWithinGeofence(latitude, longitude, sessionLat, sessionLng, allowedRadiusMeters);
+      // Use the session document's center, but keep the radius fixed regardless
+      // of values embedded in a QR payload or older session records.
+      const geoCheck = isWithinGeofence(
+        latitude,
+        longitude,
+        sessionLat,
+        sessionLng,
+        ATTENDANCE_GEOFENCE_RADIUS_METERS
+      );
 
       if (!geoCheck.isInside) {
         fail(
-          `You are outside the attendance geofence. You are ${geoCheck.distanceMeters}m from the QR session center and the allowed radius is ${allowedRadiusMeters}m.`
+          `You are outside the attendance geofence. You are ${geoCheck.distanceMeters}m from the QR session center and the allowed radius is ${ATTENDANCE_GEOFENCE_RADIUS_METERS}m.`
         );
         return;
       }
@@ -284,25 +291,34 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
   };
 
   const locationUnavailable = geoError !== null || latitude === null || longitude === null;
-  const withinDepartmentBoundary =
-    !locationUnavailable && distanceFromDept !== null && distanceFromDept <= center.radiusMeters;
+  const sessionGeoCheck =
+    !locationUnavailable && sessionCenter && latitude !== null && longitude !== null
+      ? isWithinGeofence(
+          latitude,
+          longitude,
+          sessionCenter.latitude,
+          sessionCenter.longitude,
+          ATTENDANCE_GEOFENCE_RADIUS_METERS
+        )
+      : null;
 
   let bannerStyle: React.CSSProperties;
   let bannerText: string;
-  if (geoLoading && !locationUnavailable) {
+  if (geoLoading) {
     bannerStyle = { background: 'var(--info-bg, rgba(59,130,246,0.1))', border: '1px solid var(--info-color, #3b82f6)' };
     bannerText = 'Locating you...';
   } else if (locationUnavailable) {
-    // Never fall back to the department centre here: a user whose location was
-    // denied would otherwise be told they are 0m away and inside the fence.
     bannerStyle = { background: 'var(--danger-bg)', border: '1px solid var(--danger-color)' };
     bannerText = 'Location unavailable — cannot verify attendance proximity';
-  } else if (withinDepartmentBoundary) {
+  } else if (!sessionCenter) {
+    bannerStyle = { background: 'var(--info-bg, rgba(59,130,246,0.1))', border: '1px solid var(--info-color, #3b82f6)' };
+    bannerText = 'Scan an active QR to verify distance from the admin location';
+  } else if (sessionGeoCheck?.isInside) {
     bannerStyle = { background: 'var(--success-bg)', border: '1px solid var(--success-color)' };
-    bannerText = `✅ Inside the ${center.radiusMeters}m department boundary`;
+    bannerText = `Inside the ${ATTENDANCE_GEOFENCE_RADIUS_METERS}m QR session boundary`;
   } else {
     bannerStyle = { background: 'var(--danger-bg)', border: '1px solid var(--danger-color)' };
-    bannerText = `❌ Outside the ${center.radiusMeters}m department boundary`;
+    bannerText = `Outside the ${ATTENDANCE_GEOFENCE_RADIUS_METERS}m QR session boundary`;
   }
 
   return (
@@ -328,14 +344,22 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
             color={
               locationUnavailable
                 ? 'var(--danger-color)'
-                : withinDepartmentBoundary
+                : sessionGeoCheck?.isInside
                   ? 'var(--success-color)'
-                  : 'var(--danger-color)'
+                    : sessionGeoCheck
+                      ? 'var(--danger-color)'
+                      : 'var(--info-color, #3b82f6)'
             }
           />
           <div>
-            <strong>{locationUnavailable ? 'GPS:' : `GPS Distance: ${Math.round(distanceFromDept ?? 0)}m`}</strong>{' '}
-            from {center.buildingName || 'Department Center'}
+              <strong>
+                {locationUnavailable
+                  ? 'GPS:'
+                  : sessionGeoCheck
+                    ? `GPS Distance: ${sessionGeoCheck.distanceMeters}m`
+                    : 'GPS location ready'}
+              </strong>{' '}
+              {sessionCenter ? `from ${sessionCenter.buildingName}` : ''}
             <span style={{ display: 'block', fontSize: '0.75rem', opacity: 0.85 }}>{bannerText}</span>
             {accuracy !== null && (
               <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.7 }}>
