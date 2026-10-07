@@ -1,5 +1,7 @@
 import QRCode from 'qrcode';
 
+export const MAX_QR_DURATION_MINUTES = 120;
+
 export interface QRPayload {
   sessionId: string;
   token: string;
@@ -27,7 +29,10 @@ export function createQRPayload(
 ): { rawPayload: QRPayload; qrString: string; expiresAt: number } {
   // Honour the admin-selected start time when provided, otherwise start now.
   const timestamp = startsAt !== undefined && Number.isFinite(startsAt) ? startsAt : Date.now();
-  const expiresAt = timestamp + Math.min(Math.max(durationMinutes, 1), 10) * 60 * 1000;
+  const boundedDurationMinutes = Number.isFinite(durationMinutes)
+    ? Math.min(Math.max(Math.floor(durationMinutes), 1), MAX_QR_DURATION_MINUTES)
+    : 1;
+  const expiresAt = timestamp + boundedDurationMinutes * 60 * 1000;
   
   // Create unique obfuscated token hash
   const secretKey = `IT_DEPT_SECURE_${sessionId}_${timestamp}`;

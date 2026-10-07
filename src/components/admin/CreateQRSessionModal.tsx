@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Modal } from '../common/Modal';
 import { createAttendanceSession } from '../../firebase/services';
-import { createQRPayload, generateQRDataUrl } from '../../utils/qrCodeGenerator';
+import { createQRPayload, generateQRDataUrl, MAX_QR_DURATION_MINUTES } from '../../utils/qrCodeGenerator';
 import { getCurrentDateFormatted, getCurrentTimeFormatted } from '../../utils/dateUtils';
 import { useSystemSettings } from '../../hooks/useSystemSettings';
 import { ATTENDANCE_GEOFENCE_RADIUS_METERS } from '../../utils/haversine';
@@ -27,7 +27,7 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
   const [department, setDepartment] = useState('Department of Information Technology');
   const [date, setDate] = useState(getCurrentDateFormatted());
   const [startTime, setStartTime] = useState(getCurrentTimeFormatted());
-  const durationMinutes = 10;
+  const [durationMinutes, setDurationMinutes] = useState('10');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -43,6 +43,16 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
   const handleGenerateQR = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    const selectedDurationMinutes = Number(durationMinutes);
+    if (
+      !Number.isInteger(selectedDurationMinutes) ||
+      selectedDurationMinutes < 1 ||
+      selectedDurationMinutes > MAX_QR_DURATION_MINUTES
+    ) {
+      setError(`QR duration must be between 1 and ${MAX_QR_DURATION_MINUTES} minutes.`);
+      return;
+    }
 
     // The QR must be valid for the selected window, not for "now": the previous
     // implementation ignored these fields and started counting immediately.
@@ -90,7 +100,7 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
         lat,
         lng,
         radius,
-        durationMinutes,
+        selectedDurationMinutes,
         startTs
       );
 
@@ -103,7 +113,7 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
         date,
         startTime: startTime.slice(0, 5),
         endTime: `${String(endTimeDate.getHours()).padStart(2, '0')}:${String(endTimeDate.getMinutes()).padStart(2, '0')}`,
-        durationMinutes,
+        durationMinutes: selectedDurationMinutes,
         latitude: lat,
         longitude: lng,
         radiusMeters: radius,
@@ -209,8 +219,17 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
             </div>
 
             <div className="form-group">
-              <label className="form-label">QR Expiry Duration</label>
-              <input type="text" value="10 Minutes" readOnly className="form-input" />
+              <label className="form-label">QR Expiry Duration (minutes)</label>
+              <input
+                type="number"
+                min="1"
+                max={MAX_QR_DURATION_MINUTES}
+                step="1"
+                required
+                value={durationMinutes}
+                onChange={(e) => setDurationMinutes(e.target.value)}
+                className="form-input"
+              />
             </div>
           </div>
 
