@@ -85,10 +85,6 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
         );
       });
 
-      if (position.coords.accuracy > 50) {
-        throw new Error(`Your location is only accurate to ±${Math.round(position.coords.accuracy)}m. Move to an area with a clearer GPS signal and try again.`);
-      }
-
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
       const radius = ATTENDANCE_GEOFENCE_RADIUS_METERS;

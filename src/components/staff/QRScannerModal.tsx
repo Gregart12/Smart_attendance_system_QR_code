@@ -16,11 +16,6 @@ interface ScannerProps {
   onSuccess?: () => void;
 }
 
-// GPS accuracy is the uncertainty of the fix, not a distance from the
-// building. It needs its own tolerance: indoor cellular fixes routinely report
-// 100-3000m of accuracy even while standing under the QR code.
-const MAX_ACCURACY_METERS = 50;
-
 const ALLOW_TEST_TOOLS = import.meta.env.DEV;
 
 export const QRScannerModal: React.FC<ScannerProps> = ({
@@ -138,13 +133,6 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
 
       if (geoError || latitude === null || longitude === null || accuracy === null) {
         fail('Location access is required to verify that you are within the attendance geofence before scanning.');
-        return;
-      }
-
-      if (accuracy > MAX_ACCURACY_METERS) {
-        fail(
-          `Your GPS fix is not precise enough to verify proximity (accuracy ±${Math.round(accuracy)}m, needs ±${MAX_ACCURACY_METERS}m). Move near a window or outdoors and scan again.`
-        );
         return;
       }
 
@@ -364,7 +352,6 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
             {accuracy !== null && (
               <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.7 }}>
                 Accuracy ±{Math.round(accuracy)}m
-                {accuracy > MAX_ACCURACY_METERS ? ' (too imprecise to check in)' : ''}
               </span>
             )}
           </div>
