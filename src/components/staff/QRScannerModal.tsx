@@ -3,7 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { Modal } from '../common/Modal';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { parseAndValidateQRPayload, QRPayload } from '../../utils/qrCodeGenerator';
-import { ATTENDANCE_GEOFENCE_RADIUS_METERS, isWithinGeofence } from '../../utils/haversine';
+import { isWithinGeofence, MAX_GEOFENCE_RADIUS_METERS } from '../../utils/haversine';
 import { getDeviceInfo } from '../../utils/deviceDetector';
 import { getCurrentDateFormatted, getCurrentTimeFormatted } from '../../utils/dateUtils';
 import { recordAttendance, checkExistingAttendance, getAttendanceSessionForScan } from '../../firebase/services';
@@ -58,6 +58,7 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
     latitude: number;
     longitude: number;
     buildingName: string;
+    radiusMeters: number;
   } | null>(null);
 
   const stopCamera = useCallback(() => {
@@ -119,10 +120,16 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
 
       const sessionLat = Number.isFinite(session.latitude) ? session.latitude : payload.latitude;
       const sessionLng = Number.isFinite(session.longitude) ? session.longitude : payload.longitude;
+      const sessionRadius = Number.isFinite(session.radiusMeters) ? session.radiusMeters : payload.radiusMeters;
+      if (sessionRadius < 1 || sessionRadius > MAX_GEOFENCE_RADIUS_METERS) {
+        fail('This QR session has an invalid geofence. Please ask the admin to generate a new QR code.');
+        return;
+      }
       setSessionCenter({
         latitude: sessionLat,
         longitude: sessionLng,
-        buildingName: session.buildingName || 'Admin location'
+        buildingName: session.buildingName || 'Attendance location',
+        radiusMeters: sessionRadius
       });
 
       // 3. Verify live GPS proximity before accepting the QR scan
@@ -136,19 +143,18 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
         return;
       }
 
-      // Use the session document's center, but keep the radius fixed regardless
-      // of values embedded in a QR payload or older session records.
+      // The session document is authoritative for both center and radius.
       const geoCheck = isWithinGeofence(
         latitude,
         longitude,
         sessionLat,
         sessionLng,
-        ATTENDANCE_GEOFENCE_RADIUS_METERS
+        sessionRadius
       );
 
       if (!geoCheck.isInside) {
         fail(
-          `You are outside the attendance geofence. You are ${geoCheck.distanceMeters}m from the QR session center and the allowed radius is ${ATTENDANCE_GEOFENCE_RADIUS_METERS}m.`
+          `You are outside the attendance geofence. You are ${geoCheck.distanceMeters}m from the QR session center and the allowed radius is ${sessionRadius}m.`
         );
         return;
       }
@@ -286,7 +292,7 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
           longitude,
           sessionCenter.latitude,
           sessionCenter.longitude,
-          ATTENDANCE_GEOFENCE_RADIUS_METERS
+          sessionCenter.radiusMeters
         )
       : null;
 
@@ -300,13 +306,13 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
     bannerText = 'Location unavailable — cannot verify attendance proximity';
   } else if (!sessionCenter) {
     bannerStyle = { background: 'var(--info-bg, rgba(59,130,246,0.1))', border: '1px solid var(--info-color, #3b82f6)' };
-    bannerText = 'Scan an active QR to verify distance from the admin location';
+    bannerText = 'Scan an active QR to verify distance from the saved attendance location';
   } else if (sessionGeoCheck?.isInside) {
     bannerStyle = { background: 'var(--success-bg)', border: '1px solid var(--success-color)' };
-    bannerText = `Inside the ${ATTENDANCE_GEOFENCE_RADIUS_METERS}m QR session boundary`;
+    bannerText = `Inside the ${sessionCenter.radiusMeters}m QR session boundary`;
   } else {
     bannerStyle = { background: 'var(--danger-bg)', border: '1px solid var(--danger-color)' };
-    bannerText = `Outside the ${ATTENDANCE_GEOFENCE_RADIUS_METERS}m QR session boundary`;
+    bannerText = `Outside the ${sessionCenter!.radiusMeters}m QR session boundary`;
   }
 
   return (

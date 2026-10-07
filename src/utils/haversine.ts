@@ -30,7 +30,7 @@ export function calculateDistanceMeters(
   return R * c;
 }
 
-export const ATTENDANCE_GEOFENCE_RADIUS_METERS = 5000;
+export const MAX_GEOFENCE_RADIUS_METERS = 250;
 
 /**
  * Checks if staff coordinates are within the allowed geofence radius of the department
@@ -55,6 +55,6 @@ export function isWithinGeofence(
 export const DEFAULT_IT_DEPT_GEO = {
   latitude: 5.0321,
   longitude: 7.9123,
-  radiusMeters: 100,
+  radiusMeters: 200,
   buildingName: 'Department of Information Technology Building'
 };

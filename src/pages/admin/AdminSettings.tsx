@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getSystemSettings, saveSystemSettings, updateAdminProfile } from '../../firebase/services';
 import { SystemSettings } from '../../types';
-import { DEFAULT_IT_DEPT_GEO } from '../../utils/haversine';
+import { DEFAULT_IT_DEPT_GEO, MAX_GEOFENCE_RADIUS_METERS } from '../../utils/haversine';
 import { useAuth } from '../../contexts/AuthContext';
 import { MapPin, Save, Check, UserRound, ShieldCheck, BarChart3, Users, BellRing, Upload } from 'lucide-react';
 
@@ -23,6 +23,7 @@ export const AdminSettings: React.FC = () => {
   const [latInput, setLatInput] = useState(String(DEFAULT_IT_DEPT_GEO.latitude));
   const [lngInput, setLngInput] = useState(String(DEFAULT_IT_DEPT_GEO.longitude));
   const [radiusInput, setRadiusInput] = useState(String(DEFAULT_IT_DEPT_GEO.radiusMeters));
+  const [locationCaptureMessage, setLocationCaptureMessage] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -108,8 +109,8 @@ export const AdminSettings: React.FC = () => {
       setError('Longitude must be a number between -180 and 180.');
       return;
     }
-    if (!Number.isFinite(radius) || radius <= 0 || radius > 250) {
-      setError('The allowed radius must be between 1 and 250 metres.');
+    if (!Number.isFinite(radius) || radius <= 0 || radius > MAX_GEOFENCE_RADIUS_METERS) {
+      setError(`The allowed radius must be between 1 and ${MAX_GEOFENCE_RADIUS_METERS} metres.`);
       return;
     }
 
@@ -231,6 +232,9 @@ export const AdminSettings: React.FC = () => {
         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <MapPin size={18} className="text-primary" /> Geofence & Access Settings
         </h3>
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '-0.5rem' }}>
+          QR sessions use this saved building location, not the admin device location. Set the pin at the attendance venue; the default boundary is 200 m and can be adjusted up to {MAX_GEOFENCE_RADIUS_METERS} m.
+        </p>
 
         <div className="form-group">
           <label className="form-label">Department Name</label>
@@ -284,13 +288,43 @@ export const AdminSettings: React.FC = () => {
             <input
               type="number"
               min="1"
-              max="250"
+              max={MAX_GEOFENCE_RADIUS_METERS}
               required
               value={radiusInput}
               onChange={(e) => setRadiusInput(e.target.value)}
               className="form-input"
             />
           </div>
+        </div>
+
+        <div style={{ marginTop: '0.5rem' }}>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              setLocationCaptureMessage('');
+              if (!navigator.geolocation) {
+                setLocationCaptureMessage('This browser does not support location services.');
+                return;
+              }
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  setLatInput(position.coords.latitude.toFixed(6));
+                  setLngInput(position.coords.longitude.toFixed(6));
+                  setLocationCaptureMessage(`Location captured with estimated accuracy of ±${Math.round(position.coords.accuracy)}m. Confirm the pin is at the attendance venue, then save settings.`);
+                },
+                () => setLocationCaptureMessage('Could not read this device location. Enter the building coordinates manually.'),
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+              );
+            }}
+          >
+            <MapPin size={14} /> Capture Building Location
+          </button>
+          {locationCaptureMessage && (
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', margin: '0.5rem 0 0' }}>
+              {locationCaptureMessage}
+            </p>
+          )}
         </div>
 
         {error && (
@@ -300,15 +334,19 @@ export const AdminSettings: React.FC = () => {
         <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
           <button
             type="button"
-            onClick={() =>
-              setSettings({
+            onClick={() => {
+              const defaults = {
                 defaultLat: DEFAULT_IT_DEPT_GEO.latitude,
                 defaultLng: DEFAULT_IT_DEPT_GEO.longitude,
                 defaultRadius: DEFAULT_IT_DEPT_GEO.radiusMeters,
                 departmentName: 'Department of Information Technology',
                 buildingName: DEFAULT_IT_DEPT_GEO.buildingName
-              })
-            }
+              };
+              setSettings(defaults);
+              setLatInput(String(defaults.defaultLat));
+              setLngInput(String(defaults.defaultLng));
+              setRadiusInput(String(defaults.defaultRadius));
+            }}
             className="btn btn-secondary"
           >
             Reset to Defaults
