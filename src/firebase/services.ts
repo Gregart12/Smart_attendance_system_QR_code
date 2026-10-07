@@ -460,6 +460,15 @@ export function subscribeToActiveSessions(callback: (sessions: AttendanceSession
   });
 }
 
+export function subscribeToAttendanceSessions(callback: (sessions: AttendanceSession[]) => void) {
+  return onSnapshot(collection(db, 'attendanceSessions'), (snapshot) => {
+    const list = snapshot.docs.map((sessionDoc) => sessionDoc.data() as AttendanceSession);
+    callback(list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  }, (err) => {
+    console.warn('Realtime Database attendance sessions error:', err);
+  });
+}
+
 // ================= ATTENDANCE RECORDS =================
 
 export async function recordAttendance(recordData: Omit<AttendanceRecord, 'id' | 'scannedAt'>): Promise<string> {

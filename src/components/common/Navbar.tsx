@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { GeoStatusBadge } from './GeoStatusBadge';
@@ -12,6 +13,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
   const { userProfile, role, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { pathname } = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
@@ -59,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({ toggleSidebar }) => {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
         {/* Geofence Status Badge - Restricted to Admin/HOD View */}
-        {role === 'admin' && (
+        {role === 'admin' && pathname !== '/admin/dashboard' && (
           <div className="no-print">
             <GeoStatusBadge />
           </div>

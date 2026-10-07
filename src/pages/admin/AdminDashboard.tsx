@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   subscribeToStaff,
   subscribeToAttendanceRecords,
-  subscribeToActiveSessions,
+  subscribeToAttendanceSessions,
   subscribeToAuditLogs,
   subscribeToNotifications
 } from '../../firebase/services';
@@ -31,6 +31,7 @@ export const AdminDashboard: React.FC = () => {
   const [sessions, setSessions] = useState<AttendanceSession[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [notifications, setNotifications] = useState<SystemNotification[]>([]);
+  const [now, setNow] = useState(() => Date.now());
 
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
@@ -44,7 +45,7 @@ export const AdminDashboard: React.FC = () => {
       setRecords(data);
     });
 
-    const unsubSessions = subscribeToActiveSessions((data) => {
+    const unsubSessions = subscribeToAttendanceSessions((data) => {
       setSessions(data);
     });
 
@@ -65,17 +66,34 @@ export const AdminDashboard: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(Date.now()), 15000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   // Compute Statistics. todayStr must be the LOCAL calendar day: records are
   // written with a local yyyy-MM-dd string, and toISOString() would be UTC.
   const todayStr = getCurrentDateFormatted();
   const todayRecords = records.filter((r) => r.date === todayStr);
 
   const totalStaffCount = staffList.length;
-  const presentTodayCount = todayRecords.filter((r) => r.status === 'present' || r.status === 'late').length;
-  const absentTodayCount = Math.max(0, totalStaffCount - presentTodayCount);
+  const presentStaffUids = new Set(
+    todayRecords
+      .filter((r) => r.status === 'present' || r.status === 'late')
+      .map((r) => r.staffUid)
+  );
+  const presentTodayCount = presentStaffUids.size;
+  const hasCompletedAttendanceSession = sessions.some((session) =>
+    session.date === todayStr &&
+    now >= new Date(`${session.date}T${session.startTime}`).getTime() &&
+    (session.status !== 'active' || (Number.isFinite(session.expiresAt) && now >= session.expiresAt))
+  );
+  const absentTodayCount = hasCompletedAttendanceSession
+    ? Math.max(0, totalStaffCount - presentTodayCount)
+    : 0;
   const attendancePercent = totalStaffCount > 0 ? Math.round((presentTodayCount / totalStaffCount) * 100) : 0;
 
-  const activeSessions = sessions.filter((s) => s.status === 'active' && Date.now() < s.expiresAt);
+  const activeSessions = sessions.filter((s) => s.status === 'active' && now < s.expiresAt);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -165,6 +183,7 @@ export const AdminDashboard: React.FC = () => {
         totalStaff={totalStaffCount}
         presentToday={presentTodayCount}
         absentToday={absentTodayCount}
+        hasCompletedAttendanceSession={hasCompletedAttendanceSession}
         attendancePercent={attendancePercent}
       />
 

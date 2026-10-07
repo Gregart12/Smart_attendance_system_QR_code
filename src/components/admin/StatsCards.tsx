@@ -5,6 +5,7 @@ interface StatsProps {
   totalStaff: number;
   presentToday: number;
   absentToday: number;
+  hasCompletedAttendanceSession?: boolean;
   attendancePercent: number;
 }
 
@@ -12,6 +13,7 @@ export const StatsCards: React.FC<StatsProps> = ({
   totalStaff,
   presentToday,
   absentToday,
+  hasCompletedAttendanceSession = false,
   attendancePercent
 }) => {
   return (
@@ -72,7 +74,7 @@ export const StatsCards: React.FC<StatsProps> = ({
           </div>
         </div>
         <div style={{ marginTop: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          Unmarked Staff Members
+          {hasCompletedAttendanceSession ? 'Unmarked Staff Members' : 'No completed attendance session today'}
         </div>
       </div>
 
