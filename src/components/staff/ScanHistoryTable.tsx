@@ -1,7 +1,7 @@
 import React from 'react';
 import { AttendanceRecord } from '../../types';
 import { exportAttendanceToPDF } from '../../utils/exportUtils';
-import { Download, MapPin, CheckCircle, Clock } from 'lucide-react';
+import { Download, CheckCircle, Clock } from 'lucide-react';
 
 interface Props {
   records: AttendanceRecord[];
@@ -18,7 +18,10 @@ export const ScanHistoryTable: React.FC<Props> = ({ records }) => {
           </p>
         </div>
 
-        <button onClick={() => exportAttendanceToPDF(records, 'Personal Attendance Log')} className="btn btn-secondary btn-sm">
+        <button
+          onClick={() => exportAttendanceToPDF(records, 'Personal Attendance Log', { includeDistance: false })}
+          className="btn btn-secondary btn-sm"
+        >
           <Download size={14} /> Download PDF Report
         </button>
       </div>
@@ -30,14 +33,13 @@ export const ScanHistoryTable: React.FC<Props> = ({ records }) => {
               <th>Session</th>
               <th>Date</th>
               <th>Time</th>
-              <th>GPS Distance</th>
               <th>Status</th>
             </tr>
           </thead>
           <tbody>
             {records.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
+                <td colSpan={4} style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
                   No QR scans recorded yet. Use the Scan Attendance button to mark your attendance!
                 </td>
               </tr>
@@ -47,12 +49,6 @@ export const ScanHistoryTable: React.FC<Props> = ({ records }) => {
                   <td style={{ fontWeight: 600 }}>{r.sessionTitle}</td>
                   <td>{r.date}</td>
                   <td>{r.time}</td>
-                  <td>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <MapPin size={13} className="text-primary" />
-                      {r.distanceFromCenterMeters ?? 0}m
-                    </span>
-                  </td>
                   <td>
                     <span className={`badge ${r.status === 'present' ? 'badge-present' : r.status === 'late' ? 'badge-late' : 'badge-absent'}`}>
                       {r.status === 'present' ? <CheckCircle size={12} /> : <Clock size={12} />}

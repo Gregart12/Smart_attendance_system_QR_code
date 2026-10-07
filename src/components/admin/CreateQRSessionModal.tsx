@@ -4,7 +4,7 @@ import { createAttendanceSession } from '../../firebase/services';
 import { createQRPayload, generateQRDataUrl, MAX_QR_DURATION_MINUTES } from '../../utils/qrCodeGenerator';
 import { getCurrentDateFormatted, getCurrentTimeFormatted } from '../../utils/dateUtils';
 import { useSystemSettings } from '../../hooks/useSystemSettings';
-import { MAX_GEOFENCE_RADIUS_METERS } from '../../utils/haversine';
+import { QR_SESSION_RADIUS_METERS } from '../../utils/haversine';
 import { CountdownTimer } from '../common/CountdownTimer';
 import { QrCode, Copy, Check, MapPin, Clock, Sparkles } from 'lucide-react';
 
@@ -21,7 +21,7 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
   onCreated,
   adminName
 }) => {
-  const { settings, center } = useSystemSettings();
+  const { settings } = useSystemSettings();
 
   const [title, setTitle] = useState('IT Staff Morning Attendance Check');
   const [department, setDepartment] = useState('Department of Information Technology');
@@ -68,19 +68,21 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
 
     setLoading(true);
     try {
-      const lat = center.latitude;
-      const lng = center.longitude;
-      const radius = center.radiusMeters;
+      if (!navigator.geolocation) {
+        throw new Error('This browser does not support location services.');
+      }
 
-      if (
-        !Number.isFinite(lat) || lat < -90 || lat > 90 ||
-        !Number.isFinite(lng) || lng < -180 || lng > 180
-      ) {
-        throw new Error('Set valid building coordinates in Geofence & ICT Config before generating a QR.');
-      }
-      if (!Number.isFinite(radius) || radius < 1 || radius > MAX_GEOFENCE_RADIUS_METERS) {
-        throw new Error(`Set a geofence radius between 1 and ${MAX_GEOFENCE_RADIUS_METERS} metres in Geofence & ICT Config.`);
-      }
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(
+          resolve,
+          () => reject(new Error('Allow location access and try generating the QR again.')),
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      });
+
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const radius = QR_SESSION_RADIUS_METERS;
       const tempId = `SESSION_${Date.now()}`;
       const { rawPayload, qrString, expiresAt } = createQRPayload(
         tempId,
@@ -106,7 +108,7 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
         latitude: lat,
         longitude: lng,
         radiusMeters: radius,
-        buildingName: center.buildingName,
+        buildingName: 'Admin device location',
         sessionToken: rawPayload.token,
         expiresAt,
         createdBy: adminName,
@@ -237,7 +239,7 @@ export const CreateQRSessionModal: React.FC<ModalProps> = ({
             </h4>
 
             <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '0.6rem 0 0' }}>
-              This QR uses the saved building location and {center.radiusMeters}m radius from Geofence & ICT Config. Admin device location does not change the boundary.
+              This QR uses the admin device location captured when generated. Staff can scan within the session attendance area.
             </p>
           </div>
 

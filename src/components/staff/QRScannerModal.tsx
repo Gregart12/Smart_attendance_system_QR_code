@@ -3,7 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { Modal } from '../common/Modal';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { parseAndValidateQRPayload, QRPayload } from '../../utils/qrCodeGenerator';
-import { isWithinGeofence, MAX_GEOFENCE_RADIUS_METERS } from '../../utils/haversine';
+import { isWithinGeofence, QR_SESSION_RADIUS_METERS } from '../../utils/haversine';
 import { getDeviceInfo } from '../../utils/deviceDetector';
 import { getCurrentDateFormatted, getCurrentTimeFormatted } from '../../utils/dateUtils';
 import { recordAttendance, checkExistingAttendance, getAttendanceSessionForScan } from '../../firebase/services';
@@ -30,7 +30,6 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
     message: string;
     details?: {
       sessionTitle: string;
-      distance: number;
       status: string;
     };
   } | null>(null);
@@ -121,7 +120,7 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
       const sessionLat = Number.isFinite(session.latitude) ? session.latitude : payload.latitude;
       const sessionLng = Number.isFinite(session.longitude) ? session.longitude : payload.longitude;
       const sessionRadius = Number.isFinite(session.radiusMeters) ? session.radiusMeters : payload.radiusMeters;
-      if (sessionRadius < 1 || sessionRadius > MAX_GEOFENCE_RADIUS_METERS) {
+      if (sessionRadius < 1 || sessionRadius > QR_SESSION_RADIUS_METERS) {
         fail('This QR session has an invalid geofence. Please ask the admin to generate a new QR code.');
         return;
       }
@@ -153,9 +152,7 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
       );
 
       if (!geoCheck.isInside) {
-        fail(
-          `You are outside the attendance geofence. You are ${geoCheck.distanceMeters}m from the QR session center and the allowed radius is ${sessionRadius}m.`
-        );
+        fail('Your location is outside this session’s attendance area. Move closer to the admin device that generated the QR and try again.');
         return;
       }
 
@@ -195,7 +192,6 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
         message: `Attendance marked successfully as ${recordStatus.toUpperCase()}!`,
         details: {
           sessionTitle,
-          distance: geoCheck.distanceMeters,
           status: recordStatus
         }
       });
@@ -306,13 +302,13 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
     bannerText = 'Location unavailable — cannot verify attendance proximity';
   } else if (!sessionCenter) {
     bannerStyle = { background: 'var(--info-bg, rgba(59,130,246,0.1))', border: '1px solid var(--info-color, #3b82f6)' };
-    bannerText = 'Scan an active QR to verify distance from the saved attendance location';
+    bannerText = 'Scan an active QR to verify your attendance location';
   } else if (sessionGeoCheck?.isInside) {
     bannerStyle = { background: 'var(--success-bg)', border: '1px solid var(--success-color)' };
-    bannerText = `Inside the ${sessionCenter.radiusMeters}m QR session boundary`;
+    bannerText = 'Within the attendance area';
   } else {
     bannerStyle = { background: 'var(--danger-bg)', border: '1px solid var(--danger-color)' };
-    bannerText = `Outside the ${sessionCenter!.radiusMeters}m QR session boundary`;
+    bannerText = 'Outside the attendance area';
   }
 
   return (
@@ -346,20 +342,9 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
             }
           />
           <div>
-              <strong>
-                {locationUnavailable
-                  ? 'GPS:'
-                  : sessionGeoCheck
-                    ? `GPS Distance: ${sessionGeoCheck.distanceMeters}m`
-                    : 'GPS location ready'}
-              </strong>{' '}
-              {sessionCenter ? `from ${sessionCenter.buildingName}` : ''}
+            <strong>{locationUnavailable ? 'GPS:' : 'Location status:'}</strong>{' '}
+            {sessionCenter ? sessionCenter.buildingName : ''}
             <span style={{ display: 'block', fontSize: '0.75rem', opacity: 0.85 }}>{bannerText}</span>
-            {accuracy !== null && (
-              <span style={{ display: 'block', fontSize: '0.7rem', opacity: 0.7 }}>
-                Accuracy ±{Math.round(accuracy)}m
-              </span>
-            )}
           </div>
         </div>
 
@@ -495,7 +480,6 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
               }}
             >
               <div><strong>Session:</strong> {scanResult.details.sessionTitle}</div>
-              <div><strong>Distance from QR center:</strong> {scanResult.details.distance}m</div>
               <div><strong>Status:</strong> {scanResult.details.status.toUpperCase()}</div>
             </div>
           ) : null}

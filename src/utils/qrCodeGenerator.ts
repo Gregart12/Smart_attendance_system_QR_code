@@ -1,5 +1,5 @@
 import QRCode from 'qrcode';
-import { MAX_GEOFENCE_RADIUS_METERS } from './haversine';
+import { QR_SESSION_RADIUS_METERS } from './haversine';
 
 export const MAX_QR_DURATION_MINUTES = 120;
 
@@ -114,7 +114,7 @@ export function parseAndValidateQRPayload(qrText: string): {
         typeof candidate.radiusMeters !== 'number' || !Number.isFinite(candidate.radiusMeters) ||
         candidate.latitude < -90 || candidate.latitude > 90 ||
         candidate.longitude < -180 || candidate.longitude > 180 ||
-        candidate.radiusMeters < 1 || candidate.radiusMeters > MAX_GEOFENCE_RADIUS_METERS) {
+        candidate.radiusMeters < 1 || candidate.radiusMeters > QR_SESSION_RADIUS_METERS) {
       return { valid: false, error: 'Invalid QR Code geofence data. Please ask the admin for a new session.' };
     }
 

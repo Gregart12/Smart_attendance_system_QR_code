@@ -14,9 +14,11 @@ const csvCell = (value: unknown): string => `"${str(value).replace(/"/g, '""')}"
  */
 export function exportAttendanceToPDF(
   records: AttendanceRecord[],
-  title = 'Department of IT - Staff Attendance Report'
+  title = 'Department of IT - Staff Attendance Report',
+  options: { includeDistance?: boolean } = {}
 ) {
   const doc = new jsPDF('landscape');
+  const includeDistance = options.includeDistance ?? true;
 
   // Title Header
   doc.setFontSize(18);
@@ -27,21 +29,28 @@ export function exportAttendanceToPDF(
   doc.setTextColor(100, 116, 139); // slate-500
   doc.text(`Generated on: ${new Date().toLocaleString()} | Total Records: ${records.length}`, 14, 25);
 
-  const tableData = records.map((rec, index) => [
-    index + 1,
-    str(rec.staffId) || 'N/A',
-    str(rec.staffName),
-    str(rec.department),
-    str(rec.date),
-    str(rec.time),
-    str(rec.status).toUpperCase(),
-    `${str(rec.distanceFromCenterMeters)}m`,
-    str(rec.deviceInfo) || 'Browser'
-  ]);
+  const tableData = records.map((rec, index) => {
+    const row = [
+      index + 1,
+      str(rec.staffId) || 'N/A',
+      str(rec.staffName),
+      str(rec.department),
+      str(rec.date),
+      str(rec.time),
+      str(rec.status).toUpperCase()
+    ];
+    if (includeDistance) row.push(`${str(rec.distanceFromCenterMeters)}m`);
+    row.push(str(rec.deviceInfo) || 'Browser');
+    return row;
+  });
 
   autoTable(doc, {
     startY: 32,
-    head: [['#', 'Staff ID', 'Staff Name', 'Department', 'Date', 'Time', 'Status', 'Distance', 'Device']],
+    head: [[
+      '#', 'Staff ID', 'Staff Name', 'Department', 'Date', 'Time', 'Status',
+      ...(includeDistance ? ['Distance'] : []),
+      'Device'
+    ]],
     body: tableData,
     theme: 'grid',
     headStyles: {

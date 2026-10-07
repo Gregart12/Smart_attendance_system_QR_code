@@ -31,6 +31,7 @@ export function calculateDistanceMeters(
 }
 
 export const MAX_GEOFENCE_RADIUS_METERS = 250;
+export const QR_SESSION_RADIUS_METERS = 2000;
 
 /**
  * Checks if staff coordinates are within the allowed geofence radius of the department

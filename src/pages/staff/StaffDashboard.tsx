@@ -137,7 +137,7 @@ export const StaffDashboard: React.FC = () => {
                 Live Session Ready: "{activeSessions[0].title}"
               </h4>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                📍 Geofence Radius: {activeSessions[0].radiusMeters}m ({activeSessions[0].buildingName})
+                📍 {activeSessions[0].buildingName} · Location verification required
               </p>
             </div>
           </div>

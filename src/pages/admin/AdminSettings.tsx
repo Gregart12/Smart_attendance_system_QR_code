@@ -232,7 +232,7 @@ export const AdminSettings: React.FC = () => {
           <MapPin size={18} className="text-primary" /> Geofence & Access Settings
         </h3>
         <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '-0.5rem' }}>
-          QR sessions use this saved building location, not the admin device location. Set the pin at the attendance venue; the default boundary is 200 m and can be adjusted up to {MAX_GEOFENCE_RADIUS_METERS} m.
+          This saved location is a department reference. Each attendance QR uses the admin device location captured when it is generated.
         </p>
 
         <div className="form-group">
