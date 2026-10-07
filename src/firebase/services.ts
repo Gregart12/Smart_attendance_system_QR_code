@@ -513,7 +513,7 @@ export async function recordAttendance(recordData: Omit<AttendanceRecord, 'id' |
   await addAuditLog(
     'ATTENDANCE_SCANNED',
     recordData.staffName,
-    `Marked ${recordData.status.toUpperCase()} for session "${recordData.sessionTitle}" (${recordData.distanceFromCenterMeters}m from dept center)`
+    `Marked ${recordData.status.toUpperCase()} for session "${recordData.sessionTitle}" (${recordData.distanceFromCenterMeters}m from session center)`
   );
 
   return id;

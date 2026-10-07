@@ -6,18 +6,17 @@ export function getDeviceInfo(): string {
   let browser = 'Unknown Browser';
   let os = 'Unknown OS';
 
-  // Detect OS
-  if (ua.indexOf('Win') !== -1) os = 'Windows';
-  else if (ua.indexOf('Mac') !== -1) os = 'macOS';
-  else if (ua.indexOf('Linux') !== -1) os = 'Linux';
-  else if (ua.indexOf('Android') !== -1) os = 'Android';
-  else if (ua.indexOf('like Mac') !== -1) os = 'iOS';
+  if (/Android/i.test(ua)) os = 'Android';
+  else if (/iPhone|iPad|iPod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) os = 'iOS';
+  else if (/Windows/i.test(ua)) os = 'Windows';
+  else if (/Macintosh|Mac OS X/i.test(ua)) os = 'macOS';
+  else if (/Linux/i.test(ua)) os = 'Linux';
 
-  // Detect Browser
-  if (ua.indexOf('Chrome') !== -1 && ua.indexOf('Edg') === -1) browser = 'Chrome';
-  else if (ua.indexOf('Edg') !== -1) browser = 'Edge';
-  else if (ua.indexOf('Firefox') !== -1) browser = 'Firefox';
-  else if (ua.indexOf('Safari') !== -1 && ua.indexOf('Chrome') === -1) browser = 'Safari';
+  if (/Edg\//i.test(ua)) browser = 'Edge';
+  else if (/OPR\//i.test(ua)) browser = 'Opera';
+  else if (/Chrome\//i.test(ua) || /CriOS\//i.test(ua)) browser = 'Chrome';
+  else if (/Firefox\//i.test(ua) || /FxiOS\//i.test(ua)) browser = 'Firefox';
+  else if (/Safari\//i.test(ua)) browser = 'Safari';
 
   return `${browser} on ${os}`;
 }

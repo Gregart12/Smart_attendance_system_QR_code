@@ -48,7 +48,7 @@ export function exportAttendanceToPDF(
     startY: 32,
     head: [[
       '#', 'Staff ID', 'Staff Name', 'Department', 'Date', 'Time', 'Status',
-      ...(includeDistance ? ['Distance'] : []),
+      ...(includeDistance ? ['Distance from Session Center'] : []),
       'Device'
     ]],
     body: tableData,
@@ -82,7 +82,7 @@ export function exportAttendanceToExcel(records: AttendanceRecord[]) {
     'Date': str(rec.date),
     'Time': str(rec.time),
     'Status': str(rec.status),
-    'GPS Distance (m)': rec.distanceFromCenterMeters,
+    'Distance from Session Center (m)': rec.distanceFromCenterMeters,
     'Latitude': rec.latitude,
     'Longitude': rec.longitude,
     'Device Info': str(rec.deviceInfo)
@@ -99,7 +99,7 @@ export function exportAttendanceToExcel(records: AttendanceRecord[]) {
  * Downloads Attendance Records as CSV file
  */
 export function exportAttendanceToCSV(records: AttendanceRecord[]) {
-  const headers = ['Staff ID', 'Staff Name', 'Department', 'Session', 'Date', 'Time', 'Status', 'Distance (m)', 'Device'];
+  const headers = ['Staff ID', 'Staff Name', 'Department', 'Session', 'Date', 'Time', 'Status', 'Distance from Session Center (m)', 'Device'];
 
   const csvRows = [
     headers.map(csvCell).join(','),

@@ -168,7 +168,7 @@ export const AdminReports: React.FC = () => {
                 <th>Department</th>
                 <th>Date</th>
                 <th>Time</th>
-                <th>GPS Distance</th>
+                <th>Distance from Session Center</th>
                 <th>Status</th>
               </tr>
             </thead>

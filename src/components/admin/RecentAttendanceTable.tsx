@@ -115,7 +115,7 @@ export const RecentAttendanceTable: React.FC<TableProps> = ({ records }) => {
               <th>Staff Name</th>
               <th>Session</th>
               <th>Date & Time</th>
-              <th>GPS Distance</th>
+              <th>Distance from Session Center</th>
               <th>Status</th>
               <th>Device</th>
             </tr>
