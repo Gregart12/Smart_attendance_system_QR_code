@@ -144,7 +144,7 @@
     "attendanceRecords": {
       ".read": "auth != null",
       "$recordId": {
-        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (newData.child('staffUid').val() === auth.uid && !data.exists()))",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).exists() || (auth.token.email_verified === true && newData.child('staffUid').val() === auth.uid && !data.exists()))",
         ".validate": "newData.hasChildren(['id', 'sessionId', 'staffUid', 'staffId', 'staffName', 'date', 'time', 'status']) && (data.exists() || (auth != null && (newData.child('staffUid').val() === auth.uid || root.child('admins').child(auth.uid).exists())))",
         "id": {
           ".validate": "newData.val() === $recordId"

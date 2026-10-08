@@ -2,6 +2,7 @@ import {
   createUserWithEmailAndPassword,
   deleteUser,
   sendPasswordResetEmail,
+  sendEmailVerification,
   signOut,
   updateCurrentUser,
   type User
@@ -58,6 +59,8 @@ export async function createStaffAuthAccount(input: NewStaffAccount): Promise<St
     const profile = await runWithAuthObserverPaused(async () => {
       const credential = await createUserWithEmailAndPassword(auth, email, input.password);
       createdUser = credential.user;
+
+      await sendEmailVerification(credential.user);
 
       // The newly signed-in staff member writes their own record, which the
       // The Realtime Database rules permit exactly this case.

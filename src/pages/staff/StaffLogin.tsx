@@ -8,6 +8,7 @@ export const StaffLogin: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -23,13 +24,19 @@ export const StaffLogin: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setNotice('');
     setLoading(true);
 
     try {
       await login(email, password);
       navigate('/staff/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to authenticate staff account. Please verify email and password.');
+      const message = err.message || 'Failed to authenticate staff account. Please verify email and password.';
+      if (message.startsWith('Email verification required:')) {
+        setNotice(message.replace('Email verification required: ', ''));
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -77,6 +84,23 @@ export const StaffLogin: React.FC = () => {
           }}
         >
           {error}
+        </div>
+      )}
+
+      {notice && (
+        <div
+          role="status"
+          style={{
+            padding: '0.75rem',
+            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(16, 185, 129, 0.15)',
+            border: '1px solid #10b981',
+            color: '#6ee7b7',
+            fontSize: '0.85rem',
+            marginBottom: '1rem'
+          }}
+        >
+          {notice}
         </div>
       )}
 

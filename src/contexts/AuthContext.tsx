@@ -8,6 +8,7 @@ import {
   signInWithRedirect,
   getRedirectResult,
   GoogleAuthProvider,
+  sendEmailVerification,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
   confirmPasswordReset,
@@ -74,6 +75,13 @@ function suspendedMessage(profile: UserProfile | StaffProfile): string | null {
   if (profile.role !== 'staff' || !('status' in profile)) return null;
   if (profile.status === 'active') return null;
   return `This staff account is ${profile.status}. Contact the HOD / ICT office to have it reinstated.`;
+}
+
+function needsStaffEmailVerification(
+  user: FirebaseUser,
+  profile: UserProfile | StaffProfile | null
+): boolean {
+  return !user.emailVerified && profile?.role !== 'admin';
 }
 
 /**
@@ -198,7 +206,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchProfile = useCallback(
     async (user: FirebaseUser) => {
       try {
-        const profile = await resolveProfile(user);
+        const existingProfile = await getUserProfile(user.uid);
+        if (needsStaffEmailVerification(user, existingProfile)) {
+          await firebaseSignOut(auth).catch(() => undefined);
+          clearSession();
+          return;
+        }
+
+        const profile = existingProfile ?? await resolveProfile(user);
         const blocked = suspendedMessage(profile);
         if (blocked) {
           await firebaseSignOut(auth);
@@ -219,6 +234,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const syncGoogleStaffProfile = useCallback(
     async (authUser: FirebaseUser) => {
       try {
+        if (!authUser.emailVerified) {
+          await sendEmailVerification(authUser);
+          throw new Error('Your email is not verified. We sent a confirmation link; open it before signing in again.');
+        }
+
         const profile = await resolveProfile(authUser);
         const blocked = suspendedMessage(profile);
         if (blocked) throw new Error(blocked);
@@ -306,21 +326,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!normalizedEmail) throw new Error('Enter your email address.');
       if (!pass) throw new Error('Enter your password.');
 
-      const cred = await withTimeout(
-        signInWithEmailAndPassword(auth, normalizedEmail, pass),
-        'Sign-in timed out. Check your internet connection and Firebase Authentication settings.'
-      );
-      signedIn = true;
+      await runWithAuthObserverPaused(async () => {
+        try {
+          const cred = await withTimeout(
+            signInWithEmailAndPassword(auth, normalizedEmail, pass),
+            'Sign-in timed out. Check your internet connection and Firebase Authentication settings.'
+          );
+          signedIn = true;
 
-      const profile = await withTimeout(
-        getUserProfile(cred.user.uid).then((found) => found ?? resolveProfile(cred.user)),
-        'Unable to load your profile. Check your internet connection and the Realtime Database.'
-      );
+          const profile = await withTimeout(
+            (async () => {
+              const found = await getUserProfile(cred.user.uid);
+              if (needsStaffEmailVerification(cred.user, found)) {
+                try {
+                  await sendEmailVerification(cred.user);
+                } catch (err) {
+                  throw new Error(toFriendlyError(err, 'Could not send a verification email. Please try again later.'));
+                }
+                throw new Error(`Email verification required: we sent a confirmation link to ${normalizedEmail}. Open it, then sign in again.`);
+              }
+              return found ?? resolveProfile(cred.user);
+            })(),
+            'Unable to load your profile. Check your internet connection and the Realtime Database.'
+          );
 
-      const blocked = suspendedMessage(profile);
-      if (blocked) throw new Error(blocked);
+          const blocked = suspendedMessage(profile);
+          if (blocked) throw new Error(blocked);
 
-      applySession(cred.user, profile);
+          applySession(cred.user, profile);
+        } catch (err) {
+          if (signedIn) {
+            await firebaseSignOut(auth).catch(() => undefined);
+            signedIn = false;
+            clearSession();
+          }
+          throw err;
+        }
+      });
     } catch (err) {
       // Never leave a half-authorised session behind: a revoked, suspended or
       // otherwise unusable account must end up signed out.
@@ -434,7 +476,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
 
         try {
-          const profile = await withTimeout(
+          await withTimeout(
+            sendEmailVerification(cred.user),
+            'The account was created, but the confirmation email could not be sent. Check Firebase Authentication email templates and try again.'
+          );
+
+          await withTimeout(
             createStaffProfile({
               uid: cred.user.uid,
               staffId: normalizedStaffId,
@@ -446,7 +493,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }),
             'Your account was created, but the staff profile could not be saved. Check your internet connection and the Realtime Database.'
           );
-          applySession(cred.user, profile);
         } catch (err) {
           await discardOrphanedAccount(cred.user);
           clearSession();
@@ -457,6 +503,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             )
           );
         }
+
+        await firebaseSignOut(auth).catch(() => undefined);
+        clearSession();
       });
     } catch (err) {
       if (err instanceof Error && err.message) throw err;

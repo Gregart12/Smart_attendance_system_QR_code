@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { UserCheck, User, Mail, Lock, Building, CreditCard, ArrowRight, Chrome } from 'lucide-react';
+import { UserCheck, User, Mail, Lock, Building, CreditCard, ArrowRight, Chrome, CheckCircle2 } from 'lucide-react';
 
 export const StaffRegister: React.FC = () => {
   const [name, setName] = useState('');
@@ -11,6 +11,7 @@ export const StaffRegister: React.FC = () => {
   const [department, setDepartment] = useState('Department of Information Technology');
   const [designation, setDesignation] = useState('IT Lecturer / Systems Officer');
   const [error, setError] = useState('');
+  const [confirmationMessage, setConfirmationMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
@@ -26,11 +27,12 @@ export const StaffRegister: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setConfirmationMessage('');
     setLoading(true);
 
     try {
       await registerStaff(name, staffId, email, password, department, designation);
-      navigate('/staff/dashboard');
+      setConfirmationMessage(`A confirmation link was sent to ${email.trim()}. Open it to verify your email, then sign in.`);
     } catch (err: any) {
       setError(err.message || 'Failed to register staff account. Please try again.');
     } finally {
@@ -73,6 +75,24 @@ export const StaffRegister: React.FC = () => {
           }}
         >
           {error}
+        </div>
+      )}
+
+      {confirmationMessage && (
+        <div
+          role="status"
+          style={{
+            padding: '0.75rem',
+            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(16, 185, 129, 0.15)',
+            border: '1px solid #10b981',
+            color: '#6ee7b7',
+            fontSize: '0.85rem',
+            marginBottom: '1rem'
+          }}
+        >
+          <CheckCircle2 size={16} style={{ verticalAlign: 'middle', marginRight: '0.35rem' }} />
+          {confirmationMessage}
         </div>
       )}
 
@@ -182,6 +202,9 @@ export const StaffRegister: React.FC = () => {
         >
           <Chrome size={16} /> {googleLoading ? 'Opening Google Sign-In...' : 'Continue with Google'}
         </button>
+        <p style={{ fontSize: '0.72rem', color: '#94a3b8', textAlign: 'center', margin: '0.6rem 0 0' }}>
+          Google verifies the email address as part of sign-in.
+        </p>
       </form>
 
       <div style={{ marginTop: '1.25rem', textAlign: 'center', fontSize: '0.85rem', color: '#94a3b8' }}>
