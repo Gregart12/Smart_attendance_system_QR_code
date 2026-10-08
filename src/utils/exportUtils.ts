@@ -15,10 +15,11 @@ const csvCell = (value: unknown): string => `"${str(value).replace(/"/g, '""')}"
 export function exportAttendanceToPDF(
   records: AttendanceRecord[],
   title = 'Department of IT - Staff Attendance Report',
-  options: { includeDistance?: boolean } = {}
+  options: { includeDistance?: boolean; includeDeviceId?: boolean } = {}
 ) {
   const doc = new jsPDF('landscape');
   const includeDistance = options.includeDistance ?? true;
+  const includeDeviceId = options.includeDeviceId ?? true;
 
   // Title Header
   doc.setFontSize(18);
@@ -40,6 +41,7 @@ export function exportAttendanceToPDF(
       str(rec.status).toUpperCase()
     ];
     if (includeDistance) row.push(`${str(rec.distanceFromCenterMeters)}m`);
+    if (includeDeviceId) row.push(str(rec.deviceId) || 'Not recorded');
     row.push(str(rec.deviceInfo) || 'Browser');
     return row;
   });
@@ -49,6 +51,7 @@ export function exportAttendanceToPDF(
     head: [[
       '#', 'Staff ID', 'Staff Name', 'Department', 'Date', 'Time', 'Status',
       ...(includeDistance ? ['Distance from Session Center'] : []),
+      ...(includeDeviceId ? ['Device ID'] : []),
       'Device'
     ]],
     body: tableData,
@@ -83,6 +86,7 @@ export function exportAttendanceToExcel(records: AttendanceRecord[]) {
     'Time': str(rec.time),
     'Status': str(rec.status),
     'Distance from Session Center (m)': rec.distanceFromCenterMeters,
+    'Device ID': str(rec.deviceId) || 'Not recorded',
     'Latitude': rec.latitude,
     'Longitude': rec.longitude,
     'Device Info': str(rec.deviceInfo)
@@ -99,7 +103,7 @@ export function exportAttendanceToExcel(records: AttendanceRecord[]) {
  * Downloads Attendance Records as CSV file
  */
 export function exportAttendanceToCSV(records: AttendanceRecord[]) {
-  const headers = ['Staff ID', 'Staff Name', 'Department', 'Session', 'Date', 'Time', 'Status', 'Distance from Session Center (m)', 'Device'];
+  const headers = ['Staff ID', 'Staff Name', 'Department', 'Session', 'Date', 'Time', 'Status', 'Distance from Session Center (m)', 'Device ID', 'Device'];
 
   const csvRows = [
     headers.map(csvCell).join(','),
@@ -112,6 +116,7 @@ export function exportAttendanceToCSV(records: AttendanceRecord[]) {
       csvCell(rec.time),
       csvCell(rec.status),
       csvCell(rec.distanceFromCenterMeters),
+      csvCell(rec.deviceId || 'Not recorded'),
       csvCell(rec.deviceInfo)
     ].join(','))
   ];

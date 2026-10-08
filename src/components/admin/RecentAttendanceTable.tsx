@@ -5,11 +5,26 @@ import { Download, Search, Filter, CheckCircle, Clock, MapPin, Smartphone } from
 
 interface TableProps {
   records: AttendanceRecord[];
+  allRecords?: AttendanceRecord[];
 }
 
-export const RecentAttendanceTable: React.FC<TableProps> = ({ records }) => {
+export const RecentAttendanceTable: React.FC<TableProps> = ({ records, allRecords = records }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const staffByDeviceId = new Map<string, Set<string>>();
+
+  allRecords.forEach((record) => {
+    if (!record.deviceId || !record.staffUid) return;
+    const staffUids = staffByDeviceId.get(record.deviceId) ?? new Set<string>();
+    staffUids.add(record.staffUid);
+    staffByDeviceId.set(record.deviceId, staffUids);
+  });
+
+  const sharedDeviceIds = new Set(
+    [...staffByDeviceId.entries()]
+      .filter(([, staffUids]) => staffUids.size > 1)
+      .map(([deviceId]) => deviceId)
+  );
 
   const filteredRecords = records.filter((rec) => {
     const term = searchTerm.trim().toLowerCase();
@@ -117,13 +132,14 @@ export const RecentAttendanceTable: React.FC<TableProps> = ({ records }) => {
               <th>Date & Time</th>
               <th>Distance from Session Center</th>
               <th>Status</th>
+              <th>Device ID</th>
               <th>Device</th>
             </tr>
           </thead>
           <tbody>
             {filteredRecords.length === 0 ? (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                   No attendance records found matching your current filter.
                 </td>
               </tr>
@@ -160,6 +176,25 @@ export const RecentAttendanceTable: React.FC<TableProps> = ({ records }) => {
                       {rec.status === 'late' && <Clock size={12} />}
                       {rec.status}
                     </span>
+                  </td>
+                  <td style={{ minWidth: '180px' }}>
+                    {rec.deviceId ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+                        <code title={rec.deviceId} style={{ fontSize: '0.72rem', overflowWrap: 'anywhere' }}>
+                          {rec.deviceId}
+                        </code>
+                        {sharedDeviceIds.has(rec.deviceId) && (
+                          <span
+                            className="badge badge-late"
+                            title="This browser installation has attendance records for multiple staff accounts. Review with the staff; this is a warning, not proof of impersonation."
+                          >
+                            Shared device
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Not recorded</span>
+                    )}
                   </td>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>

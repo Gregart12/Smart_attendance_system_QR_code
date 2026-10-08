@@ -58,6 +58,7 @@ export interface AttendanceRecord {
   distanceFromCenterMeters: number;
   status: 'present' | 'late' | 'absent';
   deviceInfo: string;
+  deviceId?: string;
   scannedAt: string;
   notes?: string;
 }

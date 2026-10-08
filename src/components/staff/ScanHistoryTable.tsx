@@ -19,7 +19,10 @@ export const ScanHistoryTable: React.FC<Props> = ({ records }) => {
         </div>
 
         <button
-          onClick={() => exportAttendanceToPDF(records, 'Personal Attendance Log', { includeDistance: false })}
+          onClick={() => exportAttendanceToPDF(records, 'Personal Attendance Log', {
+            includeDistance: false,
+            includeDeviceId: false
+          })}
           className="btn btn-secondary btn-sm"
         >
           <Download size={14} /> Download PDF Report

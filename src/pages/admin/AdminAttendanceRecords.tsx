@@ -66,7 +66,7 @@ export const AdminAttendanceRecords: React.FC = () => {
           : `Showing all ${records.length} record(s)`}
       </p>
 
-      <RecentAttendanceTable records={filteredRecords} />
+      <RecentAttendanceTable records={filteredRecords} allRecords={records} />
     </div>
   );
 };

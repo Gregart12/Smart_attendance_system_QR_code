@@ -4,7 +4,7 @@ import { Modal } from '../common/Modal';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { parseAndValidateQRPayload, QRPayload } from '../../utils/qrCodeGenerator';
 import { isWithinGeofence, QR_SESSION_RADIUS_METERS } from '../../utils/haversine';
-import { getDeviceInfo } from '../../utils/deviceDetector';
+import { getDeviceInfo, getPersistentDeviceId } from '../../utils/deviceDetector';
 import { getCurrentDateFormatted, getCurrentTimeFormatted } from '../../utils/dateUtils';
 import { recordAttendance, checkExistingAttendance, getAttendanceSessionForScan } from '../../firebase/services';
 import { MapPin, Camera, Upload, CheckCircle2, AlertTriangle, RefreshCw, Sparkles } from 'lucide-react';
@@ -184,7 +184,8 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
         longitude,
         distanceFromCenterMeters: geoCheck.distanceMeters,
         status: recordStatus,
-        deviceInfo: getDeviceInfo()
+        deviceInfo: getDeviceInfo(),
+        deviceId: getPersistentDeviceId()
       });
 
       setScanResult({
