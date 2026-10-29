@@ -17,19 +17,6 @@ interface ScannerProps {
 }
 
 const ALLOW_TEST_TOOLS = import.meta.env.DEV;
-type FocusModeTrackConstraintSet = MediaTrackConstraintSet & {
-  focusMode: 'continuous';
-};
-type FocusModeTrackCapabilities = MediaTrackCapabilities & {
-  focusMode?: string[];
-};
-
-const CAMERA_CONSTRAINTS: MediaTrackConstraints = {
-  facingMode: { ideal: 'environment' },
-  width: { ideal: 1920 },
-  height: { ideal: 1080 },
-  advanced: [{ focusMode: 'continuous' } as FocusModeTrackConstraintSet]
-};
 
 export const QRScannerModal: React.FC<ScannerProps> = ({
   isOpen,
@@ -50,8 +37,6 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
   const [loading, setLoading] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [cameraAdjustmentError, setCameraAdjustmentError] = useState<string | null>(null);
-  const [cameraZoom, setCameraZoom] = useState<{ min: number; max: number; step: number; value: number } | null>(null);
   const [scanNonce, setScanNonce] = useState(0);
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
@@ -233,8 +218,6 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
 
     if (isOpen && activeTab === 'camera') {
       setCameraError(null);
-      setCameraAdjustmentError(null);
-      setCameraZoom(null);
       const startCamera = async () => {
         await cameraLifecycleRef.current;
         if (cancelled) return;
@@ -243,17 +226,8 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
           instance = new Html5Qrcode('qr-reader');
           html5QrCodeRef.current = instance;
           await instance.start(
-            CAMERA_CONSTRAINTS,
-            {
-              fps: 10,
-              qrbox: (viewfinderWidth, viewfinderHeight) => {
-                const edge = Math.min(
-                  320,
-                  Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.8)
-                );
-                return { width: edge, height: edge };
-              }
-            },
+            { facingMode: 'environment' },
+            { fps: 10, qrbox: { width: 220, height: 220 } },
             (decodedText) => {
               if (cancelled) return;
               stopCamera();
@@ -261,31 +235,6 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
             },
             () => {}
           );
-          try {
-            const trackCapabilities = instance.getRunningTrackCapabilities() as FocusModeTrackCapabilities;
-            if (trackCapabilities.focusMode?.includes('continuous')) {
-              await instance.applyVideoConstraints({
-                advanced: [{ focusMode: 'continuous' } as FocusModeTrackConstraintSet]
-              });
-            }
-          } catch (err) {
-            console.warn('Optional camera focus controls are unavailable:', err);
-          }
-
-          try {
-            const zoom = instance.getRunningTrackCameraCapabilities().zoomFeature();
-            if (zoom.isSupported()) {
-              const min = zoom.min();
-              const max = zoom.max();
-              const step = zoom.step();
-              const value = zoom.value() ?? min;
-              if (max > min) {
-                setCameraZoom({ min, max, step, value });
-              }
-            }
-          } catch (err) {
-            console.warn('Optional camera zoom controls are unavailable:', err);
-          }
         } catch (err) {
           if (!cancelled) {
             console.warn('Camera access warning:', err);
@@ -350,22 +299,6 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
   const restartCamera = () => {
     setScanResult(null);
     setScanNonce((n) => n + 1);
-  };
-
-  const handleCameraZoomChange = (value: number) => {
-    setCameraZoom((current) => current ? { ...current, value } : current);
-    const instance = html5QrCodeRef.current;
-    if (!instance) return;
-
-    try {
-      void instance.getRunningTrackCameraCapabilities().zoomFeature().apply(value).catch((err) => {
-        console.warn('Camera zoom could not be adjusted:', err);
-        setCameraAdjustmentError('This camera could not adjust zoom. Move the QR closer or farther away to help it focus.');
-      });
-    } catch (err) {
-      console.warn('Camera zoom could not be adjusted:', err);
-      setCameraAdjustmentError('This camera could not adjust zoom. Move the QR closer or farther away to help it focus.');
-    }
   };
 
   const locationUnavailable = geoError !== null || latitude === null || longitude === null;
@@ -474,7 +407,7 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
             id="qr-reader"
             style={{
               width: '100%',
-              maxWidth: '400px',
+              maxWidth: '320px',
               margin: '0 auto',
               borderRadius: 'var(--radius-md)',
               overflow: 'hidden',
@@ -487,27 +420,8 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
               {cameraError}
             </p>
           )}
-          {cameraZoom && (
-            <label style={{ display: 'block', maxWidth: '400px', margin: '0.75rem auto 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Camera zoom
-              <input
-                type="range"
-                min={cameraZoom.min}
-                max={cameraZoom.max}
-                step={cameraZoom.step || 'any'}
-                value={cameraZoom.value}
-                onChange={(event) => handleCameraZoomChange(Number(event.target.value))}
-                style={{ display: 'block', width: '100%', marginTop: '0.35rem' }}
-              />
-            </label>
-          )}
-          {cameraAdjustmentError && (
-            <p style={{ fontSize: '0.8rem', color: 'var(--danger-color)', marginTop: '0.5rem' }}>
-              {cameraAdjustmentError}
-            </p>
-          )}
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.75rem' }}>
-            Hold steady and keep the QR in the box. Autofocus and zoom are enabled when supported; otherwise move the QR closer or farther away to help it focus.
+            Point your phone camera at the active QR code generated by the Admin.
           </p>
         </div>
       )}
