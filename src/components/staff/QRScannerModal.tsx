@@ -41,6 +41,7 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const fileScannerRef = useRef<Html5Qrcode | null>(null);
+  const cameraLifecycleRef = useRef<Promise<void>>(Promise.resolve());
 
   const {
     latitude,
@@ -207,16 +208,22 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
     }
   }, [geoLoading, geoError, latitude, longitude, accuracy, staffProfile, onSuccess, stopCamera]);
 
+  const handleQRScannedRef = useRef(handleQRScanned);
+  handleQRScannedRef.current = handleQRScanned;
+
   // Initialize HTML5 QR Code Scanner
   useEffect(() => {
     let cancelled = false;
+    let instance: Html5Qrcode | null = null;
 
     if (isOpen && activeTab === 'camera') {
       setCameraError(null);
       const startCamera = async () => {
+        await cameraLifecycleRef.current;
+        if (cancelled) return;
         if (!document.getElementById('qr-reader')) return;
         try {
-          const instance = new Html5Qrcode('qr-reader');
+          instance = new Html5Qrcode('qr-reader');
           html5QrCodeRef.current = instance;
           await instance.start(
             { facingMode: 'environment' },
@@ -224,7 +231,7 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
             (decodedText) => {
               if (cancelled) return;
               stopCamera();
-              void handleQRScanned(decodedText);
+              void handleQRScannedRef.current(decodedText);
             },
             () => {}
           );
@@ -236,14 +243,27 @@ export const QRScannerModal: React.FC<ScannerProps> = ({
         }
       };
 
-      void startCamera();
+      cameraLifecycleRef.current = startCamera();
     }
 
     return () => {
       cancelled = true;
-      stopCamera();
+      cameraLifecycleRef.current = cameraLifecycleRef.current.then(async () => {
+        if (!instance) return;
+        if (html5QrCodeRef.current === instance) html5QrCodeRef.current = null;
+        try {
+          await instance.stop();
+        } catch {
+          // The scanner may not have finished starting.
+        }
+        try {
+          instance.clear();
+        } catch {
+          // Element already removed.
+        }
+      });
     };
-  }, [isOpen, activeTab, scanNonce, handleQRScanned, stopCamera]);
+  }, [isOpen, activeTab, scanNonce, stopCamera]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target;
